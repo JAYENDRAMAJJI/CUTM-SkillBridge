@@ -1,7 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { StoreService } from '../../services/store.service';
+import * as d3 from 'd3';
+import * as XLSX from 'xlsx';
 
 interface TrainerCourse {
   id: number;
@@ -14,6 +16,17 @@ interface TrainerCourse {
   videos?: string[];
   notes?: string[];
   quizQuestions?: { question: string; options: string[]; correctIndex: number }[];
+}
+
+interface TrainerAssignment {
+  id: number;
+  title: string;
+  course: string;
+  dueDate: string;
+  totalSubmissions: number;
+  reviewed: number;
+  pendingSubmissions: number;
+  pdfName?: string;
 }
 
 @Component({
@@ -54,7 +67,7 @@ interface TrainerCourse {
           <div class="flex border-b overflow-x-auto">
             <button
               *ngFor="let tab of tabs"
-              (click)="activeTab = tab"
+              (click)="setActiveTab(tab)"
               [class.border-b-2]="activeTab === tab"
               [class.border-primary]="activeTab === tab"
               [class.text-primary]="activeTab === tab"
@@ -303,7 +316,12 @@ interface TrainerCourse {
             <!-- Students Tab -->
             <ng-container *ngIf="activeTab === 'students'">
               <div class="mb-6">
-                <h2 class="text-2xl font-bold text-primary mb-4">My Students</h2>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <h2 class="text-2xl font-bold text-primary">My Students</h2>
+                  <button (click)="downloadAllStudents()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium">
+                    Download Students (Excel)
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="Search students..."
@@ -354,9 +372,38 @@ interface TrainerCourse {
               <div class="mb-6">
                 <div class="flex justify-between items-center mb-4">
                   <h2 class="text-2xl font-bold text-primary">Assignments & Reviews</h2>
-                  <button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium">
+                  <button (click)="startCreateAssignment()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium">
                     + Create Assignment
                   </button>
+                </div>
+                <div *ngIf="showAssignmentForm" class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 class="font-bold text-primary mb-3">Create Assignment</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Title</label>
+                      <input [(ngModel)]="assignmentForm.title" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="Assignment title" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Course</label>
+                      <input [(ngModel)]="assignmentForm.course" type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="Course name" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Due Date</label>
+                      <input [(ngModel)]="assignmentForm.dueDate" type="date" class="w-full px-3 py-2 border rounded-lg" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Assignment PDF</label>
+                      <input type="file" accept="application/pdf" (change)="onAssignmentPdfChange($event)" class="w-full text-sm" />
+                      <div *ngIf="assignmentForm.pdfName" class="mt-2 text-xs text-gray-600">
+                        Selected: {{ assignmentForm.pdfName }}
+                        <button type="button" (click)="clearAssignmentPdf()" class="ml-2 text-primary hover:text-primary-gold">Clear</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex gap-2 mt-4">
+                    <button (click)="saveAssignment()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium">Add Assignment</button>
+                    <button (click)="cancelAssignmentForm()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+                  </div>
                 </div>
               </div>
 
@@ -375,9 +422,32 @@ interface TrainerCourse {
                     <span>📄 {{ assignment.totalSubmissions }} Submitted</span>
                     <span>✅ {{ assignment.reviewed }} Reviewed</span>
                   </div>
-                  <button class="mt-4 px-4 py-2 bg-primary-gold text-primary rounded-lg hover:bg-yellow-500 font-medium text-sm">
+                  <button type="button" (click)="reviewAssignment(assignment)" class="mt-4 px-4 py-2 bg-primary-gold text-primary rounded-lg hover:bg-yellow-500 font-medium text-sm">
                     Review Submissions
                   </button>
+                  <div *ngIf="selectedAssignment?.id === assignment.id" class="mt-4 border-t border-gray-200 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <h4 class="font-semibold text-primary">Student Answers</h4>
+                      <button type="button" (click)="closeReview()" class="text-xs text-gray-500 hover:text-gray-700">Close</button>
+                    </div>
+                    <div *ngIf="!(assignmentSubmissions[assignment.id]?.length)" class="text-sm text-gray-500">
+                      No submissions available.
+                    </div>
+                    <div class="space-y-3" *ngIf="assignmentSubmissions[assignment.id]?.length">
+                      <div *ngFor="let submission of assignmentSubmissions[assignment.id]" class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                          <div class="font-semibold text-gray-800">{{ submission.studentName }}</div>
+                          <span class="text-xs text-gray-500">Submitted: {{ submission.submittedAt }}</span>
+                        </div>
+                        <div class="mt-2 space-y-2">
+                          <div *ngFor="let answer of submission.answers" class="text-sm">
+                            <div class="font-semibold text-gray-700">Q: {{ answer.question }}</div>
+                            <div class="text-gray-600">A: {{ answer.response }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </ng-container>
@@ -391,15 +461,11 @@ interface TrainerCourse {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
                   <h3 class="font-bold text-gray-800 mb-4">Enrollment Trends</h3>
-                  <div class="h-48 flex items-center justify-center bg-gray-50 rounded">
-                    <p class="text-gray-500">Chart visualization would go here</p>
-                  </div>
+                  <div #enrollmentChart class="h-48 bg-gray-50 rounded"></div>
                 </div>
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
                   <h3 class="font-bold text-gray-800 mb-4">Student Performance</h3>
-                  <div class="h-48 flex items-center justify-center bg-gray-50 rounded">
-                    <p class="text-gray-500">Chart visualization would go here</p>
-                  </div>
+                  <div #performanceChart class="h-48 bg-gray-50 rounded"></div>
                 </div>
               </div>
             </ng-container>
@@ -409,18 +475,46 @@ interface TrainerCourse {
     </div>
   `
 })
-export class TrainerPanelComponent {
+export class TrainerPanelComponent implements AfterViewInit {
   store = inject(StoreService);
+
+  @ViewChild('enrollmentChart') enrollmentChartRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('performanceChart') performanceChartRef?: ElementRef<HTMLDivElement>;
   
   activeTab = 'courses';
   tabs = ['courses', 'students', 'assignments', 'analytics'];
 
   showCourseForm = false;
+  showAssignmentForm = false;
   isEditing = false;
   editingCourseId: number | null = null;
   managedCourse: TrainerCourse | null = null;
   courseForm = this.getEmptyCourseForm();
   manageForm = this.getEmptyManageForm();
+  assignmentForm = this.getEmptyAssignmentForm();
+  selectedAssignment: TrainerAssignment | null = null;
+  assignmentSubmissions: Record<number, { studentName: string; submittedAt: string; answers: { question: string; response: string }[] }[]> = {
+    1: [
+      {
+        studentName: 'Rahul Sharma',
+        submittedAt: '2026-02-10',
+        answers: [
+          { question: 'Explain React component lifecycle.', response: 'Lifecycle methods define the stages a component goes through.' },
+          { question: 'What is a hook?', response: 'A way to use state and other features in functional components.' }
+        ]
+      }
+    ],
+    2: [
+      {
+        studentName: 'Priya Patel',
+        submittedAt: '2026-02-09',
+        answers: [
+          { question: 'Describe a regression model.', response: 'A model that predicts continuous values.' },
+          { question: 'Why normalize data?', response: 'To scale features and improve model training.' }
+        ]
+      }
+    ]
+  };
 
   stats = {
     totalCourses: 4,
@@ -443,7 +537,7 @@ export class TrainerPanelComponent {
     { name: 'Sneha Singh', course: 'Database Design', progress: 90, performance: 92 }
   ];
 
-  assignments = [
+  assignments: TrainerAssignment[] = [
     { id: 1, title: 'React Component Project', course: 'Full Stack Web Dev', dueDate: 'Oct 30', totalSubmissions: 40, reviewed: 28, pendingSubmissions: 12 },
     { id: 2, title: 'Data Analysis Case Study', course: 'Python for Data Science', dueDate: 'Nov 5', totalSubmissions: 35, reviewed: 30, pendingSubmissions: 5 },
     { id: 3, title: 'Redux Store Implementation', course: 'Advanced React', dueDate: 'Nov 10', totalSubmissions: 28, reviewed: 20, pendingSubmissions: 8 }
@@ -451,6 +545,12 @@ export class TrainerPanelComponent {
 
   constructor() {
     this.recalculateStats();
+  }
+
+  ngAfterViewInit() {
+    if (this.activeTab === 'analytics') {
+      this.renderCharts();
+    }
   }
 
   getEmptyCourseForm() {
@@ -474,11 +574,27 @@ export class TrainerPanelComponent {
     };
   }
 
+  getEmptyAssignmentForm() {
+    return {
+      title: '',
+      course: '',
+      dueDate: '',
+      pdfName: ''
+    };
+  }
+
   startCreateCourse() {
     this.showCourseForm = true;
     this.isEditing = false;
     this.editingCourseId = null;
     this.courseForm = this.getEmptyCourseForm();
+  }
+
+  setActiveTab(tab: string) {
+    this.activeTab = tab;
+    if (tab === 'analytics') {
+      setTimeout(() => this.renderCharts());
+    }
   }
 
   startEditCourse(course: any) {
@@ -550,6 +666,49 @@ export class TrainerPanelComponent {
     this.isEditing = false;
     this.editingCourseId = null;
     this.courseForm = this.getEmptyCourseForm();
+  }
+
+  startCreateAssignment() {
+    this.showAssignmentForm = true;
+    this.assignmentForm = this.getEmptyAssignmentForm();
+  }
+
+  saveAssignment() {
+    if (!this.assignmentForm.title.trim() || !this.assignmentForm.course.trim() || !this.assignmentForm.dueDate) {
+      return;
+    }
+    const nextId = this.assignments.length ? Math.max(...this.assignments.map((assignment) => assignment.id)) + 1 : 1;
+    this.assignments = [
+      ...this.assignments,
+      {
+        id: nextId,
+        title: this.assignmentForm.title,
+        course: this.assignmentForm.course,
+        dueDate: this.assignmentForm.dueDate,
+        totalSubmissions: 0,
+        reviewed: 0,
+        pendingSubmissions: 0,
+        pdfName: this.assignmentForm.pdfName
+      }
+    ];
+    this.showAssignmentForm = false;
+    this.assignmentForm = this.getEmptyAssignmentForm();
+  }
+
+  cancelAssignmentForm() {
+    this.showAssignmentForm = false;
+    this.assignmentForm = this.getEmptyAssignmentForm();
+  }
+
+  onAssignmentPdfChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files.length ? input.files[0] : null;
+    this.assignmentForm.pdfName = file ? file.name : '';
+    input.value = '';
+  }
+
+  clearAssignmentPdf() {
+    this.assignmentForm.pdfName = '';
   }
 
   openManageCourse(course: any) {
@@ -719,5 +878,130 @@ export class TrainerPanelComponent {
       totalStudents,
       avgRating: Number(avgRating.toFixed(1))
     };
+  }
+
+  downloadAllStudents() {
+    const rows = this.students.map((student) => ({
+      Name: student.name,
+      Course: student.course,
+      Progress: student.progress,
+      Performance: student.performance
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+    XLSX.writeFile(workbook, 'students.xlsx');
+  }
+
+  reviewAssignment(assignment: any) {
+    this.selectedAssignment = assignment;
+  }
+
+  closeReview() {
+    this.selectedAssignment = null;
+  }
+
+  renderCharts() {
+    this.renderEnrollmentChart();
+    this.renderPerformanceChart();
+  }
+
+  renderEnrollmentChart() {
+    const host = this.enrollmentChartRef?.nativeElement;
+    if (!host) {
+      return;
+    }
+
+    host.innerHTML = '';
+    const data = [120, 150, 180, 210, 260, 300, 340];
+    const width = host.clientWidth || 320;
+    const height = host.clientHeight || 180;
+    const margin = { top: 12, right: 12, bottom: 24, left: 32 };
+
+    const svg = d3
+      .select(host)
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height);
+
+    const x = d3
+      .scalePoint<number>()
+      .domain(data.map((_, i) => i))
+      .range([margin.left, width - margin.right]);
+    const y = d3
+      .scaleLinear()
+      .domain([0, d3.max(data) || 0])
+      .nice()
+      .range([height - margin.bottom, margin.top]);
+
+    const line = d3
+      .line<number>()
+      .x((_, i) => x(i) as number)
+      .y((d) => y(d));
+
+    svg
+      .append('path')
+      .datum(data)
+      .attr('fill', 'none')
+      .attr('stroke', '#1f3a8a')
+      .attr('stroke-width', 2)
+      .attr('d', line);
+
+    svg
+      .selectAll('circle')
+      .data(data)
+      .enter()
+      .append('circle')
+      .attr('cx', (_, i) => x(i) as number)
+      .attr('cy', (d) => y(d))
+      .attr('r', 3.5)
+      .attr('fill', '#f59e0b');
+
+    const yAxis = d3.axisLeft(y).ticks(4);
+    svg.append('g').attr('transform', `translate(${margin.left},0)`).call(yAxis);
+  }
+
+  renderPerformanceChart() {
+    const host = this.performanceChartRef?.nativeElement;
+    if (!host) {
+      return;
+    }
+
+    host.innerHTML = '';
+    const data = [78, 84, 69, 92, 75];
+    const width = host.clientWidth || 320;
+    const height = host.clientHeight || 180;
+    const margin = { top: 12, right: 12, bottom: 24, left: 32 };
+
+    const svg = d3
+      .select(host)
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height);
+
+    const x = d3
+      .scaleBand<number>()
+      .domain(data.map((_, i) => i))
+      .range([margin.left, width - margin.right])
+      .padding(0.3);
+    const y = d3
+      .scaleLinear()
+      .domain([0, 100])
+      .nice()
+      .range([height - margin.bottom, margin.top]);
+
+    svg
+      .selectAll('rect')
+      .data(data)
+      .enter()
+      .append('rect')
+      .attr('x', (_, i) => x(i) as number)
+      .attr('y', (d) => y(d))
+      .attr('width', x.bandwidth())
+      .attr('height', (d) => y(0) - y(d))
+      .attr('fill', '#10b981');
+
+    const yAxis = d3.axisLeft(y).ticks(4).tickFormat((value) => `${value}%`);
+    svg.append('g').attr('transform', `translate(${margin.left},0)`).call(yAxis);
   }
 }
