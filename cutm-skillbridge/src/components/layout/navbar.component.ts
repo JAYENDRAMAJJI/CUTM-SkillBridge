@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../services/store.service';
 import { CommonModule } from '@angular/common';
-
+// import companyLogo from '../../../src/assets/CUTM_Logo.png';
 @Component({
   selector: 'app-navbar',
   standalone: true,
@@ -16,7 +16,7 @@ import { CommonModule } from '@angular/common';
           <div class="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity" routerLink="/" (click)="scrollToTop()">
             <!-- Official Logo -->
             <div class="w-14 h-14 flex-shrink-0 bg-white rounded-full p-0.5 shadow-md flex items-center justify-center">
-              <img src="assets/CUTM SKILL BRIDGE-logo.png" alt="CUTM SkillBridge" class="w-full h-full rounded-full object-contain" />
+              <img src="https://res.cloudinary.com/digyil242/image/upload/v1770704169/Cutm_skill_badge_logo-modified_llrcjk.png" alt="CUTM SkillBridge" class="w-full h-full rounded-full object-contain" />
             </div>
             
             <!-- Brand Text -->
