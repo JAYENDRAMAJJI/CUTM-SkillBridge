@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CUTM SKILL BRIDGE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1E2A44', // Navy Blue
+              gold: '#D4A017',    // Royal Gold
+            },
+            secondary: {
+              red: '#8B1E1E',     // Maroon Red
+              bg: '#F5F6F8',      // Light Grey
+            },
+            accent: {
+              blue: '#1F6F8B',    // Peacock Blue
+              softGold: '#F2C94C' // Soft Gold
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Merriweather', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+<script type="importmap">
+{
+  "imports": {
+    "rxjs": "https://esm.sh/rxjs@^7.8.2?conditions=es2015",
+    "rxjs/operators": "https://esm.sh/rxjs@^7.8.2/operators?conditions=es2015",
+    "rxjs/ajax": "https://esm.sh/rxjs@^7.8.2/ajax?conditions=es2015",
+    "rxjs/webSocket": "https://esm.sh/rxjs@^7.8.2/webSocket?conditions=es2015",
+    "rxjs/testing": "https://esm.sh/rxjs@^7.8.2/testing?conditions=es2015",
+    "rxjs/fetch": "https://esm.sh/rxjs@^7.8.2/fetch?conditions=es2015",
+    "@angular/forms": "https://esm.sh/@angular/forms@^21.1.2?external=rxjs",
+    "@angular/compiler": "https://esm.sh/@angular/compiler@^21.1.2?external=rxjs",
+    "@angular/core": "https://esm.sh/@angular/core@^21.1.2?external=rxjs",
+    "@angular/platform-browser": "https://esm.sh/@angular/platform-browser@^21.1.2?external=rxjs",
+    "d3": "https://esm.sh/d3@^7.9.0?external=rxjs",
+    "@angular/common": "https://esm.sh/@angular/common@^21.1.2?external=rxjs",
+    "@angular/router": "https://esm.sh/@angular/router@^21.1.2?external=rxjs"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-secondary-bg text-slate-800 font-sans antialiased flex flex-col">
+  <app-root class="flex flex-col min-h-screen"></app-root>
+</body>
+</html>
