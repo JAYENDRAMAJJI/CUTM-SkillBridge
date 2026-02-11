@@ -20,7 +20,7 @@ import { FormsModule } from '@angular/forms';
           <div class="relative z-10 w-full flex flex-col items-center">
             <!-- Logo -->
             <div class="w-28 h-28 mb-8 flex items-center justify-center">
-              <img src="assets/CUTM SKILL BRIDGE-logo.png" alt="CUTM Skill Bridge" class="w-full h-full" />
+              <img src="https://res.cloudinary.com/digyil242/image/upload/v1770704169/Cutm_skill_badge_logo-modified_llrcjk.png" alt="CUTM Skill Bridge" class="w-full h-full" />
             </div>
             
             <h2 class="text-3xl font-serif font-bold mb-4">Welcome Back!</h2>
