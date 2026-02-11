@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../services/store.service';
 import { CommonModule } from '@angular/common';
-
+// import companyLogo from '../../../src/assets/CUTM_Logo.png';
 @Component({
   selector: 'app-navbar',
   standalone: true,
