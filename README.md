@@ -1,4 +1,4 @@
-# CUTM SkillBridge 🎓
+# CUTM SKILL BRIDGE 🎓
 
 > **Learn • Certify • Intern • Get Placed**
 
