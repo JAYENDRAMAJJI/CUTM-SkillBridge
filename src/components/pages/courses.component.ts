@@ -103,7 +103,7 @@ import { ApiService } from '../../services/api.service';
               </div>
 
               <!-- Progress Bar -->
-              <div class="mb-4" *ngIf="course.progress > 0">
+              <div class="mb-4" *ngIf="isEnrolled(course)">
                 <div class="flex justify-between text-sm mb-1">
                   <span class="text-gray-600">Progress</span>
                   <span class="text-blue-600 font-semibold">{{ course.progress }}%</span>
@@ -124,7 +124,7 @@ import { ApiService } from '../../services/api.service';
                 (click)="viewCourseDetail(course)"
                 class="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
               >
-                {{ course.progress > 0 ? 'Continue Learning' : 'View Course' }}
+                {{ isEnrolled(course) ? 'Continue Learning' : 'View Course' }}
               </button>
             </div>
           </div>
@@ -177,7 +177,7 @@ export class CoursesComponent implements OnInit {
   }
 
   loadCourses() {
-    this.courses = this.store.getCoursesArray();
+    this.courses = this.store.getAvailableCoursesArray();
     this.filteredCourses = [...this.courses];
   }
 
@@ -243,5 +243,9 @@ export class CoursesComponent implements OnInit {
 
   viewCourseDetail(course: Course) {
     this.router.navigate(['/courses', course.id]);
+  }
+
+  isEnrolled(course: Course): boolean {
+    return this.store.isCourseEnrolled(course.id);
   }
 }

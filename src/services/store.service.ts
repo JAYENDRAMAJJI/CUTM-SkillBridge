@@ -147,6 +147,7 @@ export class StoreService {
   unreadCount = signal<number>(0);
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
+  enrolledCourseIds = signal<string[]>([]);
   
   // Mock Data
   courses = signal<Course[]>([
@@ -262,8 +263,34 @@ export class StoreService {
   userName = computed(() => this.currentUser()?.name || 'Guest');
   userRole = computed(() => this.currentUser()?.role);
   hasUnread = computed(() => this.unreadCount() > 0);
+  enrolledCourses = computed(() => this.courses().filter(course => this.enrolledCourseIds().includes(course.id)));
+  availableCourses = computed(() => this.courses().filter(course => !this.enrolledCourseIds().includes(course.id)));
 
-  constructor() {}
+  constructor() {
+    this.enrolledCourseIds.set(this.loadEnrolledCourseIds());
+  }
+
+  private loadEnrolledCourseIds(): string[] {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('enrolledCourseIds');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(id => typeof id === 'string');
+          }
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  }
+
+  private persistEnrolledCourseIds(ids: string[]) {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem('enrolledCourseIds', JSON.stringify(ids));
+  }
 
   // User Management
   login(role: UserRole, user?: Partial<User>) {
@@ -355,6 +382,25 @@ export class StoreService {
   // Course Management
   addCourse(course: Course) {
     this.courses.update(courses => [...courses, course]);
+  }
+
+  isCourseEnrolled(courseId: string): boolean {
+    return this.enrolledCourseIds().includes(courseId);
+  }
+
+  enrollCourse(courseId: string): void {
+    if (this.isCourseEnrolled(courseId)) return;
+    const updated = [...this.enrolledCourseIds(), courseId];
+    this.enrolledCourseIds.set(updated);
+    this.persistEnrolledCourseIds(updated);
+  }
+
+  getEnrolledCoursesArray(): Course[] {
+    return this.enrolledCourses();
+  }
+
+  getAvailableCoursesArray(): Course[] {
+    return this.availableCourses();
   }
 
   updateCourse(courseId: string, updates: Partial<Course>) {

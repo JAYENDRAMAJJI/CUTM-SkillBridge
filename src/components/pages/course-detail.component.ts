@@ -221,18 +221,21 @@ export class CourseDetailComponent implements OnInit {
   loadCourse() {
     const courses = this.store.getCoursesArray();
     this.course = courses.find(c => c.id === this.courseId);
-    this.isEnrolled = this.course?.progress !== undefined && this.course?.progress > 0;
+    this.isEnrolled = this.courseId ? this.store.isCourseEnrolled(this.courseId) : false;
   }
 
   onEnroll() {
     if (this.courseId && !this.isEnrolled) {
+      this.store.enrollCourse(this.courseId);
+      this.isEnrolled = true;
+      if (this.course) {
+        this.course.progress = this.course.progress || 0;
+        this.course.completedLessons = this.course.completedLessons || 0;
+      }
+
       this.api.enrollCourse(this.courseId).subscribe({
-        next: (response) => {
-          this.isEnrolled = true;
-          if (this.course) {
-            this.course.progress = 0;
-          }
-        }
+        next: () => {},
+        error: () => {}
       });
     }
   }

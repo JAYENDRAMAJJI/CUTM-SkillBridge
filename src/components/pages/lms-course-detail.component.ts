@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { StoreService, Course as StoreCourse } from '../../services/store.service';
 
 interface Lesson {
   id: number;
@@ -10,11 +11,11 @@ interface Lesson {
   duration: number;
   notes: Array<{ id: number; title: string; content: string }>;
   quiz: Array<{ id: number; question: string; options: string[]; answer: string }>;
-  resources: Array<{ id: number; name: string; size: string }>;
+  resources: Array<{ id: number; name: string; size: string; dataUrl?: string }>;
 }
 
 interface Course {
-  id: number;
+  id: string;
   title: string;
   description: string;
   duration: number;
@@ -84,8 +85,16 @@ interface Course {
               @if (activeTab === 'video') {
                 <div class="p-6">
                   <div class="bg-gray-900 rounded-lg aspect-video flex items-center justify-center mb-4 relative group overflow-hidden">
-                    @if (!isVideoPlaying) {
-                      <!-- Video Thumbnail with Play Button -->
+                    @if (currentLesson.resources?.[0]?.dataUrl) {
+                      <!-- Video Player with actual video -->
+                      <video 
+                        [src]="currentLesson.resources[0].dataUrl" 
+                        controls 
+                        class="w-full h-full"
+                        style="background: #000;">
+                      </video>
+                    } @else {
+                      <!-- Fallback placeholder -->
                       <div class="absolute inset-0 bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
                         <button (click)="playVideo()" 
                                 class="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl transform transition hover:scale-110 active:scale-95">
@@ -97,36 +106,6 @@ interface Course {
                       <div class="absolute bottom-4 left-4 text-white">
                         <p class="text-sm font-semibold">{{ currentLesson.title }}</p>
                         <p class="text-xs text-gray-300">Duration: {{ currentLesson.duration }} minutes</p>
-                      </div>
-                    } @else {
-                      <!-- Video Player Interface -->
-                      <div class="w-full h-full bg-black flex flex-col">
-                        <!-- Video Area -->
-                        <div class="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                          <div class="text-center text-white">
-                            <div class="text-2xl mb-4 animate-pulse">🎬 Playing Video</div>
-                            <p class="text-lg font-semibold">{{ currentLesson.title }}</p>
-                            <div class="mt-4 flex items-center justify-center gap-2">
-                              <div class="w-2 h-2 bg-primary-gold rounded-full animate-pulse"></div>
-                              <p class="text-sm text-gray-400">Video in progress...</p>
-                            </div>
-                          </div>
-                        </div>
-                        <!-- Video Controls -->
-                        <div class="bg-gray-900 p-4 border-t border-gray-700">
-                          <div class="flex items-center gap-4">
-                            <button (click)="pauseVideo()" class="text-white hover:text-primary-gold transition">
-                              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                              </svg>
-                            </button>
-                            <!-- Progress Bar -->
-                            <div class="flex-1 bg-gray-700 h-1 rounded-full overflow-hidden">
-                              <div class="bg-primary-gold h-full transition-all duration-300" [style.width.%]="videoProgress"></div>
-                            </div>
-                            <span class="text-white text-sm">{{ formatTime(currentTime) }} / {{ formatTime(currentLesson.duration * 60) }}</span>
-                          </div>
-                        </div>
                       </div>
                     }
                   </div>
@@ -275,9 +254,9 @@ interface Course {
               <h3 class="text-lg font-bold text-primary mb-4">👨‍🏫 Instructor</h3>
               <div class="text-center">
                 <div class="w-16 h-16 bg-primary-gold rounded-full mx-auto mb-3 flex items-center justify-center text-white text-2xl font-bold">
-                  {{ course.instructor.charAt(0) }}
+                  {{ (course.instructor || 'I').charAt(0) }}
                 </div>
-                <p class="font-semibold text-gray-700">{{ course.instructor }}</p>
+                <p class="font-semibold text-gray-700">{{ course.instructor || 'Instructor' }}</p>
                 <button class="mt-4 w-full bg-primary text-white py-2 rounded hover:bg-opacity-90 transition">
                   💬 Message
                 </button>
@@ -291,73 +270,8 @@ interface Course {
   styles: []
 })
 export class LmsCourtDetailComponent implements OnInit {
-  course: Course = {
-    id: 1,
-    title: 'Full MERN Stack Development',
-    description: 'Learn to build complete web applications with MongoDB, Express, React, and Node.js',
-    duration: 40,
-    rating: 4.8,
-    instructor: 'John Developer',
-    lessons: [
-      {
-        id: 1,
-        title: 'Course Introduction & Setup',
-        description: 'Get started with MERN stack development and set up your environment',
-        duration: 45,
-        notes: [
-          { id: 1, title: 'Setup Guide', content: 'Complete guide to set up Node.js, npm, and MongoDB on your system.' },
-          { id: 2, title: 'Project Structure', content: 'Understanding the MERN project folder structure and file organization.' }
-        ],
-        quiz: [
-          { id: 1, question: 'What does MERN stand for?', options: ['MongoDB, Express, React, Node.js', 'MySQL, Express, React, Netlify', 'MongoDB, Express, Ruby, Node.js'], answer: 'MongoDB, Express, React, Node.js' },
-          { id: 2, question: 'Which is a NoSQL database?', options: ['MySQL', 'MongoDB', 'PostgreSQL'], answer: 'MongoDB' },
-          { id: 3, question: 'What package manager do we use for Node.js?', options: ['npm', 'pip', 'maven'], answer: 'npm' }
-        ],
-        resources: [
-          { id: 1, name: 'Environment Setup Checklist', size: '2.5 MB' },
-          { id: 2, name: 'MERN Architecture Diagram', size: '1.8 MB' }
-        ]
-      },
-      {
-        id: 2,
-        title: 'Node.js & Express Fundamentals',
-        description: 'Master backend development with Node.js and Express',
-        duration: 60,
-        notes: [
-          { id: 3, title: 'Express Basics', content: 'Learn routing, middleware, and request/response handling in Express.' },
-          { id: 4, title: 'API Design', content: 'Best practices for designing RESTful APIs with Express.' }
-        ],
-        quiz: [
-          { id: 4, question: 'What is Express.js?', options: ['A frontend library', 'A Node.js web framework', 'A database'], answer: 'A Node.js web framework' },
-          { id: 5, question: 'What is middleware?', options: ['A function that processes requests', 'A database tool', 'A styling library'], answer: 'A function that processes requests' },
-          { id: 6, question: 'What HTTP method is used for creating resources?', options: ['GET', 'POST', 'DELETE'], answer: 'POST' }
-        ],
-        resources: [
-          { id: 3, name: 'Express Documentation', size: '3.2 MB' },
-          { id: 4, name: 'Sample Routes Code', size: '0.8 MB' }
-        ]
-      },
-      {
-        id: 3,
-        title: 'MongoDB & Database Design',
-        description: 'Design and manage databases with MongoDB',
-        duration: 50,
-        notes: [
-          { id: 5, title: 'MongoDB Basics', content: 'Understanding collections, documents, and queries in MongoDB.' },
-          { id: 6, title: 'Schema Design', content: 'Best practices for designing efficient database schemas.' }
-        ],
-        quiz: [
-          { id: 7, question: 'What is MongoDB?', options: ['A relational database', 'A NoSQL database', 'A JavaScript library'], answer: 'A NoSQL database' },
-          { id: 8, question: 'What is a document in MongoDB?', options: ['A file', 'A JSON-like object', 'A collection'], answer: 'A JSON-like object' },
-          { id: 9, question: 'What is Mongoose?', options: ['An ODM library', 'A database', 'A frontend framework'], answer: 'An ODM library' }
-        ],
-        resources: [
-          { id: 5, name: 'MongoDB Guide', size: '2.9 MB' },
-          { id: 6, name: 'Database Schema Template', size: '1.1 MB' }
-        ]
-      }
-    ]
-  };
+  course: Course = this.getDefaultCourse('default');
+  courseId = 'default';
 
   currentLesson: Lesson = this.course.lessons[0];
   activeTab: 'video' | 'notes' | 'quiz' | 'resources' = 'video';
@@ -374,21 +288,23 @@ export class LmsCourtDetailComponent implements OnInit {
   currentTime = 0;
   private videoInterval: any;
 
-  constructor(private router: Router, private route: ActivatedRoute) {}
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private store: StoreService
+  ) {}
 
   ngOnInit() {
     // Get courseId from route params
     this.route.params.subscribe(params => {
       if (params['id']) {
-        const courseId = params['id'];
-        // Find the course from the store or use the courseId
-        console.log('Loading course:', courseId);
+        this.courseId = params['id'];
+        this.loadCourseFromStore();
+        this.restoreProgress();
       }
     });
-    // Load progress from localStorage
-    const saved = localStorage.getItem('courseProgress_1');
-    if (saved) {
-      this.completedLessons = new Set(JSON.parse(saved));
+    if (!this.courseId) {
+      this.restoreProgress();
     }
   }
 
@@ -439,7 +355,7 @@ export class LmsCourtDetailComponent implements OnInit {
 
   markLessonComplete() {
     this.completedLessons.add(this.currentLesson.id);
-    localStorage.setItem('courseProgress_1', JSON.stringify([...this.completedLessons]));
+    this.saveProgress();
     alert('Lesson marked as complete!');
   }
 
@@ -486,5 +402,210 @@ export class LmsCourtDetailComponent implements OnInit {
 
   goBack() {
     this.router.navigate(['/lms-courses']);
+  }
+
+  private loadCourseFromStore() {
+    const storeCourse = this.findStoreCourse(this.courseId);
+    if (!storeCourse) {
+      this.course = this.getDefaultCourse(this.courseId);
+      this.currentLesson = this.course.lessons[0];
+      return;
+    }
+
+    this.course = this.mapStoreCourse(storeCourse);
+    this.currentLesson = this.course.lessons[0];
+  }
+
+  private findStoreCourse(courseId: string): StoreCourse | undefined {
+    return this.store.getCoursesArray().find(course => course.id === courseId);
+  }
+
+  private mapStoreCourse(storeCourse: StoreCourse): Course {
+    const materials = this.getCourseMaterials(storeCourse.id);
+    const baseLessons = this.getDefaultLessons();
+    
+    if (materials && materials.videos && materials.videos.length > 0) {
+      return {
+        id: storeCourse.id,
+        title: storeCourse.title,
+        description: storeCourse.description || 'Course description is coming soon.',
+        duration: Number.parseInt(storeCourse.duration || '0', 10) || 10,
+        rating: 4.8,
+        instructor: storeCourse.instructor,
+        lessons: this.createLessonsFromMaterials(materials, baseLessons)
+      };
+    }
+
+    return {
+      id: storeCourse.id,
+      title: storeCourse.title,
+      description: storeCourse.description || 'Course description is coming soon.',
+      duration: Number.parseInt(storeCourse.duration || '0', 10) || 10,
+      rating: 4.8,
+      instructor: storeCourse.instructor,
+      lessons: baseLessons
+    };
+  }
+
+  private getDefaultCourse(courseId: string): Course {
+    return {
+      id: courseId,
+      title: 'Full MERN Stack Development',
+      description: 'Learn to build complete web applications with MongoDB, Express, React, and Node.js',
+      duration: 40,
+      rating: 4.8,
+      instructor: 'John Developer',
+      lessons: this.getDefaultLessons()
+    };
+  }
+
+  private getDefaultLessons(): Lesson[] {
+    return [
+      {
+        id: 1,
+        title: 'Course Introduction & Setup',
+        description: 'Get started with the course and set up your environment',
+        duration: 45,
+        notes: [
+          { id: 1, title: 'Setup Guide', content: 'Complete guide to set up the tools on your system.' }
+        ],
+        quiz: [
+          { id: 1, question: 'What will you set up in this lesson?', options: ['Tools', 'Database', 'Deployment'], answer: 'Tools' }
+        ],
+        resources: [
+          { id: 1, name: 'Setup Checklist', size: '2.5 MB' }
+        ]
+      },
+      {
+        id: 2,
+        title: 'Core Concepts',
+        description: 'Understand the core concepts and architecture',
+        duration: 50,
+        notes: [
+          { id: 2, title: 'Core Concepts', content: 'Key ideas and architecture overview.' }
+        ],
+        quiz: [
+          { id: 2, question: 'What is the focus of this lesson?', options: ['Architecture', 'Testing', 'Deployment'], answer: 'Architecture' }
+        ],
+        resources: [
+          { id: 2, name: 'Architecture Diagram', size: '1.8 MB' }
+        ]
+      },
+      {
+        id: 3,
+        title: 'Hands-on Practice',
+        description: 'Apply what you learned with hands-on tasks',
+        duration: 55,
+        notes: [
+          { id: 3, title: 'Practice Tasks', content: 'Follow these steps to complete the exercises.' }
+        ],
+        quiz: [
+          { id: 3, question: 'Why practice?', options: ['Apply learning', 'Skip steps', 'Memorize only'], answer: 'Apply learning' }
+        ],
+        resources: [
+          { id: 3, name: 'Practice Workbook', size: '2.1 MB' }
+        ]
+      }
+    ];
+  }
+
+  private saveProgress() {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(this.getProgressKey(), JSON.stringify([...this.completedLessons]));
+  }
+
+  private restoreProgress() {
+    if (typeof localStorage === 'undefined') return;
+    const saved = localStorage.getItem(this.getProgressKey());
+    if (saved) {
+      this.completedLessons = new Set(JSON.parse(saved));
+    }
+  }
+
+  private getProgressKey(): string {
+    return `courseProgress_${this.courseId}`;
+  }
+
+  private getCourseMaterials(courseId: string): any {
+    if (typeof localStorage === 'undefined') return null;
+    const stored = localStorage.getItem(`courseMaterials_${courseId}`);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private createLessonsFromMaterials(materials: any, baseLessons: Lesson[]): Lesson[] {
+    const videos = Array.isArray(materials.videos) ? materials.videos : [];
+    const notes = Array.isArray(materials.notes) ? materials.notes : [];
+    const quizQuestions = Array.isArray(materials.quizQuestions) ? materials.quizQuestions : [];
+
+    if (videos.length === 0) {
+      return baseLessons;
+    }
+
+    return videos.map((video: { name: string; data: string }, index: number) => {
+      const lessonIndex = index + 1;
+      const noteForLesson = notes[index] || null;
+      const quizForLesson = quizQuestions[index] || null;
+      const videoName = video.name || `Video ${lessonIndex}`;
+
+      return {
+        id: lessonIndex,
+        title: `Lesson ${lessonIndex}: ${videoName.replace(/\.[^.]*$/, '')}`,
+        description: `Video lecture: ${videoName}`,
+        duration: 45,
+        notes: noteForLesson ? [
+          {
+            id: index + 1,
+            title: noteForLesson.replace(/\.[^.]*$/, ''),
+            content: `Notes for: ${noteForLesson}`
+          }
+        ] : [
+          {
+            id: 1,
+            title: 'Lesson Notes',
+            content: 'Notes for this lesson are coming soon.'
+          }
+        ],
+        quiz: quizForLesson
+          ? [
+              {
+                id: 1,
+                question: quizForLesson.question || 'Test your understanding',
+                options: Array.isArray(quizForLesson.options) ? quizForLesson.options : ['Option 1', 'Option 2'],
+                answer: Array.isArray(quizForLesson.options)
+                  ? quizForLesson.options[quizForLesson.correctIndex || 0] || ''
+                  : ''
+              }
+            ]
+          : [
+              {
+                id: 1,
+                question: 'Did you understand this lesson?',
+                options: ['Yes', 'Partially', 'Need Help'],
+                answer: 'Yes'
+              }
+            ],
+        resources: video.data ? [
+          {
+            id: 1,
+            name: videoName,
+            size: '1.5 MB',
+            dataUrl: video.data
+          }
+        ] : [
+          {
+            id: 1,
+            name: videoName,
+            size: '1.5 MB'
+          }
+        ]
+      };
+    });
   }
 }

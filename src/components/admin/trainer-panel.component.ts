@@ -14,7 +14,8 @@ interface TrainerCourse {
   enrolledStudents: number;
   rating: number;
   status: string;
-  videos?: string[];
+  storeCourseId?: string;
+  videos?: { name: string; data: string }[];
   notes?: string[];
   quizQuestions?: { question: string; options: string[]; correctIndex: number }[];
 }
@@ -110,7 +111,7 @@ interface TrainerAssignment {
                         <button type="button" (click)="clearFiles('videos')" class="ml-2 text-primary hover:text-primary-gold">Clear</button>
                         <div class="mt-1">Select again to add more files.</div>
                         <div class="mt-1 space-y-1">
-                          <div *ngFor="let video of courseForm.videos">• {{ video }}</div>
+                          <div *ngFor="let video of courseForm.videos">• {{ video.name }}</div>
                         </div>
                       </div>
                     </div>
@@ -240,7 +241,7 @@ interface TrainerAssignment {
                       <button type="button" (click)="clearManageFiles('videos')" class="ml-2 text-primary hover:text-primary-gold">Clear</button>
                       <div class="mt-1">Select again to add more files.</div>
                       <div class="mt-1 space-y-1">
-                        <div *ngFor="let video of manageForm.videos">• {{ video }}</div>
+                        <div *ngFor="let video of manageForm.videos">• {{ video.name }}</div>
                       </div>
                     </div>
                   </div>
@@ -496,6 +497,8 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
   courseForm = this.getEmptyCourseForm();
   manageForm = this.getEmptyManageForm();
   assignmentForm = this.getEmptyAssignmentForm();
+  courseFileReadPending = 0;
+  manageFileReadPending = 0;
   selectedAssignment: TrainerAssignment | null = null;
   assignmentSubmissions: Record<number, { studentName: string; submittedAt: string; answers: { question: string; response: string }[] }[]> = {
     1: [
@@ -573,7 +576,7 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
     return {
       title: '',
       category: '',
-      videos: [] as string[],
+      videos: [] as { name: string; data: string }[],
       notes: [] as string[],
       quizQuestions: [this.getEmptyQuestion()] as { question: string; options: string[]; correctIndex: number }[]
     };
@@ -584,7 +587,7 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
       title: '',
       category: '',
       status: 'active',
-      videos: [] as string[],
+      videos: [] as { name: string; data: string }[],
       notes: [] as string[],
       quizQuestions: [this.getEmptyQuestion()] as { question: string; options: string[]; correctIndex: number }[]
     };
@@ -634,6 +637,10 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
   }
 
   saveCourse() {
+    if (this.courseFileReadPending > 0) {
+      alert('Please wait for all video files to finish loading.');
+      return;
+    }
     if (!this.courseForm.title.trim()) {
       return;
     }
@@ -651,8 +658,34 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
             }
           : course
       );
+      const updatedCourse = this.courses.find((course) => course.id === this.editingCourseId);
+      if (updatedCourse?.storeCourseId) {
+        this.store.updateCourse(updatedCourse.storeCourseId, {
+          title: updatedCourse.title,
+          category: updatedCourse.category,
+          duration: updatedCourse.duration,
+          totalLessons: this.courseForm.videos.length || 10
+        });
+        this.saveCourseMaterials(updatedCourse.storeCourseId, this.courseForm.videos, this.courseForm.notes, this.courseForm.quizQuestions);
+      }
     } else {
       const nextId = this.courses.length ? Math.max(...this.courses.map((course) => course.id)) + 1 : 1;
+      const storeCourseId = this.createStoreCourseId(nextId);
+      const instructor = this.store.currentUser()?.name || 'Trainer';
+      this.store.addCourse({
+        id: storeCourseId,
+        title: this.courseForm.title,
+        instructor,
+        progress: 0,
+        totalLessons: this.courseForm.videos.length || 10,
+        completedLessons: 0,
+        thumbnail: `https://picsum.photos/seed/${storeCourseId}/300/200`,
+        description: 'Trainer created course',
+        category: this.courseForm.category,
+        duration: 'Self-paced',
+        enrollmentCount: 0
+      });
+      this.saveCourseMaterials(storeCourseId, this.courseForm.videos, this.courseForm.notes, this.courseForm.quizQuestions);
       this.courses = [
         ...this.courses,
         {
@@ -663,6 +696,7 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
           enrolledStudents: 0,
           rating: 0,
           status: 'active',
+          storeCourseId,
           videos: [...this.courseForm.videos],
           notes: [...this.courseForm.notes],
           quizQuestions: [...this.courseForm.quizQuestions]
@@ -753,6 +787,11 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    if (this.manageFileReadPending > 0) {
+      alert('Please wait for all video files to finish loading.');
+      return;
+    }
+
     this.courses = this.courses.map((course) =>
       course.id === this.managedCourse.id
         ? {
@@ -767,19 +806,111 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
         : course
     );
     this.managedCourse = this.courses.find((course) => course.id === this.managedCourse.id) || null;
+    if (this.managedCourse?.storeCourseId) {
+      this.store.updateCourse(this.managedCourse.storeCourseId, {
+        title: this.manageForm.title,
+        category: this.manageForm.category,
+        duration: this.managedCourse.duration,
+        totalLessons: this.manageForm.videos.length || 10
+      });
+      this.saveCourseMaterials(this.managedCourse.storeCourseId, this.manageForm.videos, this.manageForm.notes, this.manageForm.quizQuestions);
+    }
     this.recalculateStats();
+  }
+
+  private createStoreCourseId(nextId: number): string {
+    return `t-${nextId}-${Date.now()}`;
+  }
+
+  private saveCourseMaterials(courseId: string, videos: { name: string; data: string }[], notes: string[], quiz: any[]) {
+    if (typeof localStorage === 'undefined') return;
+    const materials = {
+      courseId,
+      videos: videos.map((video) => ({ name: video.name || '', data: video.data || '' })),
+      notes,
+      quizQuestions: quiz
+    };
+    try {
+      localStorage.setItem(`courseMaterials_${courseId}`, JSON.stringify(materials));
+    } catch (error) {
+      console.error('Failed to save course materials', error);
+      alert('Videos/notes are too large to store. Please use smaller files.');
+    }
+  }
+
+  getCourseMaterials(courseId: string): any {
+    if (typeof localStorage === 'undefined') return null;
+    const stored = localStorage.getItem(`courseMaterials_${courseId}`);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return null;
+      }
+    }
+    return null;
   }
 
   onFileChange(type: 'videos' | 'notes', event: Event) {
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
-    const fileNames = files.map((file) => file.name);
+    
     if (type === 'videos') {
-      this.courseForm.videos = [...this.courseForm.videos, ...fileNames];
+      this.courseFileReadPending = files.length;
+      this.readFilesSequentially(files, 'courseForm');
     } else {
+      const fileNames = files.map(file => file.name);
       this.courseForm.notes = [...this.courseForm.notes, ...fileNames];
     }
-    input.value = '';
+  }
+
+  private readFilesSequentially(files: File[], formType: 'courseForm' | 'manageForm') {
+    if (files.length === 0) {
+      if (formType === 'courseForm') {
+        this.courseFileReadPending = 0;
+      } else {
+        this.manageFileReadPending = 0;
+      }
+      return;
+    }
+
+    let index = 0;
+    const readNext = () => {
+      if (index >= files.length) {
+        return;
+      }
+
+      const file = files[index];
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const data = e.target?.result as string;
+        const targetForm = formType === 'courseForm' ? this.courseForm : this.manageForm;
+        targetForm.videos = [...targetForm.videos, { name: file.name, data }];
+        this.decrementPending(formType);
+        index += 1;
+        readNext();
+      };
+
+      reader.onerror = () => {
+        console.error(`Failed to read file: ${file.name}`);
+        this.decrementPending(formType);
+        index += 1;
+        readNext();
+      };
+
+      reader.readAsDataURL(file);
+    };
+
+    readNext();
+  }
+
+  private decrementPending(formType: 'courseForm' | 'manageForm') {
+    if (formType === 'courseForm') {
+      this.courseFileReadPending = Math.max(0, this.courseFileReadPending - 1);
+    } else {
+      this.manageFileReadPending = Math.max(0, this.manageFileReadPending - 1);
+    }
   }
 
   clearFiles(type: 'videos' | 'notes') {
@@ -793,13 +924,14 @@ export class TrainerPanelComponent implements OnInit, AfterViewInit {
   onManageFileChange(type: 'videos' | 'notes', event: Event) {
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
-    const fileNames = files.map((file) => file.name);
+    
     if (type === 'videos') {
-      this.manageForm.videos = [...this.manageForm.videos, ...fileNames];
+      this.manageFileReadPending = files.length;
+      this.readFilesSequentially(files, 'manageForm');
     } else {
+      const fileNames = files.map(file => file.name);
       this.manageForm.notes = [...this.manageForm.notes, ...fileNames];
     }
-    input.value = '';
   }
 
   clearManageFiles(type: 'videos' | 'notes') {

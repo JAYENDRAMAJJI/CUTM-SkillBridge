@@ -12,7 +12,7 @@ import { StoreService } from '../../services/store.service';
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-primary-gold">
         <div class="text-sm text-gray-500 font-medium uppercase">Enrolled Courses</div>
-        <div class="text-2xl font-bold text-primary mt-1">{{store.courses().length}}</div>
+        <div class="text-2xl font-bold text-primary mt-1">{{store.enrolledCourses().length}}</div>
       </div>
       <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-secondary-red">
         <div class="text-sm text-gray-500 font-medium uppercase">Attendance</div>
@@ -35,7 +35,7 @@ import { StoreService } from '../../services/store.service';
         </div>
 
         <div class="space-y-4">
-          @for (course of store.courses(); track course.id) {
+          @for (course of store.enrolledCourses(); track course.id) {
             <button (click)="continueCourse(course)" class="w-full bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex gap-4 transition-all hover:shadow-md hover:border-accent-blue cursor-pointer text-left">
               <img [src]="course.thumbnail" class="w-24 h-24 object-cover rounded-md flex-shrink-0" alt="Course">
               <div class="flex-1 flex flex-col justify-between">
