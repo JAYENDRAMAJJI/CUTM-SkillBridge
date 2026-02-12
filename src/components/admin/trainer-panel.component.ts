@@ -1,9 +1,10 @@
-import { Component, inject, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, AfterViewInit, ElementRef, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { StoreService } from '../../services/store.service';
+import { ActivatedRoute } from '@angular/router';
 import * as d3 from 'd3';
-import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
 
 interface TrainerCourse {
   id: number;
@@ -325,6 +326,7 @@ interface TrainerAssignment {
                 <input
                   type="text"
                   placeholder="Search students..."
+                  [(ngModel)]="studentSearchTerm"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                 />
               </div>
@@ -341,7 +343,7 @@ interface TrainerAssignment {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let student of students" class="border-b hover:bg-gray-50">
+                    <tr *ngFor="let student of filteredStudents" class="border-b hover:bg-gray-50">
                       <td class="px-6 py-4">{{ student.name }}</td>
                       <td class="px-6 py-4">{{ student.course }}</td>
                       <td class="px-6 py-4">
@@ -475,14 +477,16 @@ interface TrainerAssignment {
     </div>
   `
 })
-export class TrainerPanelComponent implements AfterViewInit {
+export class TrainerPanelComponent implements OnInit, AfterViewInit {
   store = inject(StoreService);
+  route = inject(ActivatedRoute);
 
   @ViewChild('enrollmentChart') enrollmentChartRef?: ElementRef<HTMLDivElement>;
   @ViewChild('performanceChart') performanceChartRef?: ElementRef<HTMLDivElement>;
   
   activeTab = 'courses';
   tabs = ['courses', 'students', 'assignments', 'analytics'];
+  studentSearchTerm = '';
 
   showCourseForm = false;
   showAssignmentForm = false;
@@ -545,6 +549,18 @@ export class TrainerPanelComponent implements AfterViewInit {
 
   constructor() {
     this.recalculateStats();
+  }
+
+  ngOnInit() {
+    this.route.queryParamMap.subscribe((params) => {
+      const tab = params.get('tab');
+      if (tab && this.tabs.includes(tab)) {
+        this.activeTab = tab;
+        if (tab === 'analytics') {
+          setTimeout(() => this.renderCharts());
+        }
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -881,16 +897,36 @@ export class TrainerPanelComponent implements AfterViewInit {
   }
 
   downloadAllStudents() {
-    const rows = this.students.map((student) => ({
-      Name: student.name,
-      Course: student.course,
-      Progress: student.progress,
-      Performance: student.performance
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
-    XLSX.writeFile(workbook, 'students.xlsx');
+    const workbook = new Workbook();
+    const worksheet = workbook.addWorksheet('Students');
+
+    worksheet.columns = [
+      { header: 'Name', key: 'name', width: 24 },
+      { header: 'Course', key: 'course', width: 24 },
+      { header: 'Progress', key: 'progress', width: 12 },
+      { header: 'Performance', key: 'performance', width: 14 }
+    ];
+
+    this.students.forEach((student) => {
+      worksheet.addRow({
+        name: student.name,
+        course: student.course,
+        progress: student.progress,
+        performance: student.performance
+      });
+    });
+
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'students.xlsx';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   reviewAssignment(assignment: any) {
@@ -899,6 +935,16 @@ export class TrainerPanelComponent implements AfterViewInit {
 
   closeReview() {
     this.selectedAssignment = null;
+  }
+
+  get filteredStudents() {
+    const term = this.studentSearchTerm.trim().toLowerCase();
+    if (!term) {
+      return this.students;
+    }
+    return this.students.filter((student) =>
+      student.name.toLowerCase().includes(term) || student.course.toLowerCase().includes(term)
+    );
   }
 
   renderCharts() {

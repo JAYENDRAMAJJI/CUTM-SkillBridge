@@ -34,35 +34,35 @@ import { RecruiterViewComponent } from './recruiter-view.component';
               </button>
             }
             @if (store.userRole() === 'admin') {
-              <button (click)="navigateTo('admin')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('admin', { tab: 'students' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Manage Students</span>
               </button>
-               <button (click)="navigateTo('admin')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+               <button (click)="navigateTo('admin', { tab: 'internships-jobs' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Approvals</span>
               </button>
-              <button (click)="navigateTo('admin')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('admin', { tab: 'reports' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Analytics</span>
               </button>
             }
             @if (store.userRole() === 'trainer') {
-              <button (click)="navigateTo('trainer')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('trainer', { tab: 'courses' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">My Courses</span>
               </button>
-              <button (click)="navigateTo('trainer')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('trainer', { tab: 'students' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Students</span>
               </button>
-              <button (click)="navigateTo('trainer')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('trainer', { tab: 'assignments' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Assignments</span>
               </button>
             }
             @if (store.userRole() === 'recruiter') {
-              <button (click)="navigateTo('recruiter')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('recruiter', { tab: 'jobs' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Job Postings</span>
               </button>
-              <button (click)="navigateTo('recruiter')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('recruiter', { tab: 'applications' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Applications</span>
               </button>
-              <button (click)="navigateTo('recruiter')" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
+              <button (click)="navigateTo('recruiter', { tab: 'interviews' })" class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left">
                 <span class="truncate">Interviews</span>
               </button>
             }
@@ -125,7 +125,7 @@ export class DashboardComponent {
     return `${greeting}, ${this.store.userName()}`;
   }
 
-  navigateTo(route: string) {
-    this.router.navigate([`/${route}`]);
+  navigateTo(route: string, queryParams?: Record<string, string>) {
+    this.router.navigate([`/${route}`], { queryParams });
   }
 }

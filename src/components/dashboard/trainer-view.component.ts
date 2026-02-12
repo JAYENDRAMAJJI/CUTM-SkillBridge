@@ -284,22 +284,19 @@ export class TrainerViewComponent {
   ];
 
   uploadContent() {
-    this.router.navigate(['/trainer']);
-    alert('Upload Content feature - Navigate to content management');
+    this.router.navigate(['/trainer'], { queryParams: { tab: 'courses' } });
   }
 
   createAssignment() {
-    this.router.navigate(['/trainer']);
-    alert('Create Assignment feature - Opening assignment form');
+    this.router.navigate(['/trainer'], { queryParams: { tab: 'assignments' } });
   }
 
   viewAnalytics() {
-    this.router.navigate(['/trainer']);
-    alert('View Analytics feature - Showing course analytics');
+    this.router.navigate(['/trainer'], { queryParams: { tab: 'analytics' } });
   }
 
   messageStudents() {
-    alert('Message Students feature - Opening messaging system');
+    this.router.navigate(['/trainer'], { queryParams: { tab: 'students' } });
   }
 
   createCourse() {

@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { StoreService, Interview } from '../../services/store.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-recruiter-panel',
@@ -255,8 +256,9 @@ import { StoreService, Interview } from '../../services/store.service';
     </div>
   `
 })
-export class RecruiterPanelComponent {
+export class RecruiterPanelComponent implements OnInit {
   store = inject(StoreService);
+  route = inject(ActivatedRoute);
   
   activeTab = 'jobs';
   tabs = ['jobs', 'applications', 'interviews', 'candidates'];
@@ -289,6 +291,15 @@ export class RecruiterPanelComponent {
     { name: 'Jane Smith', title: 'UI/UX Designer', experience: '3 years', location: 'Mumbai', skills: ['Figma', 'Adobe XD', 'HTML/CSS'] },
     { name: 'Robert Brown', title: 'Data Scientist', experience: '4 years', location: 'Pune', skills: ['Python', 'ML', 'TensorFlow', 'SQL'] }
   ];
+
+  ngOnInit() {
+    this.route.queryParamMap.subscribe((params) => {
+      const tab = params.get('tab');
+      if (tab && this.tabs.includes(tab)) {
+        this.activeTab = tab;
+      }
+    });
+  }
 
   getRecruiterInterviews() {
     return this.store.interviews();
