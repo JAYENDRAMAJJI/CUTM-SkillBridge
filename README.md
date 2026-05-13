@@ -77,10 +77,15 @@ A comprehensive all-in-one platform for students to learn new skills, get certif
 
 ### 1. Install & Run Frontend
 ```bash
+# open a terminal in the repository root first
+# the folder must contain package.json
+cd CUTM-SkillBridge
 npm install
 npm run dev
 ```
 Frontend: `http://localhost:4200`
+
+> If `npm` shows `ENOENT: no such file or directory, open '...\\package.json'`, you are in the wrong folder. Run the commands from the cloned `CUTM-SkillBridge` directory instead of your user home directory.
 
 ### 2. Test with Demo Login
 - Click role button (Student, Admin, Trainer, or Placement Cell)
@@ -197,4 +202,3 @@ MIT License - see LICENSE file for details
 [View Full Documentation](./SETUP_GUIDE.md) • [Quick Start](./QUICKSTART.md)
 
 </div>
-

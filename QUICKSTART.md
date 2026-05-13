@@ -20,6 +20,8 @@ cd cutm-skillbridge
 npm install
 ```
 
+> Run every `npm` command from the project folder shown above. If you see `Could not read package.json`, your terminal is not inside the cloned repository yet.
+
 ---
 
 ## Step 2: Start Frontend (No Backend Required)

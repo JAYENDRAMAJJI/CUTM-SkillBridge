@@ -2,17 +2,16 @@
 
 ## ⚡ Get Started in 30 Seconds
 
-### 1. Start Frontend (Already Running)
-The frontend is currently running on:
-```
-http://localhost:4200
-```
-
-If not running, execute:
+### 1. Start Frontend
+Open a terminal in the cloned repository folder first, then run:
 ```bash
-cd "d:\Live project\cutm-skillbridge"
+git clone https://github.com/cutm/skillbridge.git
+cd cutm-skillbridge
+npm install
 npm run dev
 ```
+
+If you get `ENOENT` or `Could not read package.json`, your terminal is not inside the project directory yet.
 
 ### 2. Test Demo Login
 1. Go to http://localhost:4200
