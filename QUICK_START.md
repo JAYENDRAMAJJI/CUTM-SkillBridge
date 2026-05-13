@@ -3,7 +3,7 @@
 ## ⚡ Get Started in 30 Seconds
 
 ### 1. Start Frontend
-Open a terminal in the cloned repository folder first, then run:
+Open a terminal, then run:
 ```bash
 git clone https://github.com/JAYENDRAMAJJI/CUTM-SkillBridge.git
 cd CUTM-SkillBridge
