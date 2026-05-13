@@ -5,8 +5,8 @@
 ### 1. Start Frontend
 Open a terminal in the cloned repository folder first, then run:
 ```bash
-git clone https://github.com/cutm/skillbridge.git
-cd cutm-skillbridge
+git clone https://github.com/JAYENDRAMAJJI/CUTM-SkillBridge.git
+cd CUTM-SkillBridge
 npm install
 npm run dev
 ```

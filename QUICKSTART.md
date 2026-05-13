@@ -13,8 +13,8 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/cutm/skillbridge.git
-cd cutm-skillbridge
+git clone https://github.com/JAYENDRAMAJJI/CUTM-SkillBridge.git
+cd CUTM-SkillBridge
 
 # Install dependencies
 npm install
